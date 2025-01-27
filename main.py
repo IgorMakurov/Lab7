@@ -3,12 +3,11 @@
 
 import time
 import itertools
-from tkinter import Tk, Label, Button, Entry, Text, Scrollbar, END, Y, X, BOTH, RIGHT, TOP, BOTTOM, LEFT, filedialog
+from tkinter import Tk, Label, Button, Entry, Text, Scrollbar, END
 from tkinter import messagebox
-from collections import defaultdict
 
 # Функции расчета и генерации расписаний, которые были предоставлены ранее
-def check_shift_limits(schedule, num_men, num_women, num_places, num_shifts):
+def check_shift_limits(schedule, num_men, num_women):
     workers = ['M' + str(i+1) for i in range(num_men)] + ['W' + str(i+1) for i in range(num_women)]
     for worker in workers:
       shift_count = 0
@@ -22,7 +21,7 @@ def check_shift_limits(schedule, num_men, num_women, num_places, num_shifts):
         return False
     return True
 
-def calculate_efficiency(schedule, num_men, num_women):
+def calculate_efficiency(schedule):
     efficiency = 0
     for shift_workers in schedule:
         for worker in shift_workers:
@@ -53,8 +52,8 @@ def generate_schedules_algorithmic(num_men, num_women, num_places, num_shifts, m
                     break
             if not valid_schedule:
                 break
-        if valid_schedule and check_shift_limits(shift_combination, num_men, num_women, num_places, num_shifts):
-            efficiency = calculate_efficiency(shift_combination, num_men, num_women)
+        if valid_schedule and check_shift_limits(shift_combination, num_men, num_women):
+            efficiency = calculate_efficiency(shift_combination)
             all_schedules.append(shift_combination)
             if efficiency > best_efficiency:
                 best_schedule = shift_combination
@@ -91,8 +90,8 @@ def generate_schedules_pythonic(num_men, num_women, num_places, num_shifts, max_
                 valid_schedule = False
                 break
         
-        if valid_schedule and check_shift_limits(shift_combination, num_men, num_women, num_places, num_shifts):
-            efficiency = calculate_efficiency(shift_combination, num_men, num_women)
+        if valid_schedule and check_shift_limits(shift_combination, num_men, num_women):
+            efficiency = calculate_efficiency(shift_combination)
             all_schedules.append(shift_combination)
             if efficiency > best_efficiency:
                 best_schedule = shift_combination
