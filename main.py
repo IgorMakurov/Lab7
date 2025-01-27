@@ -1,13 +1,14 @@
 #Требуется для своего варианта второй части л.р. №6 (усложненной программы) разработать реализацию с использованием графического интерфейса.
 #Допускается использовать любую графическую библиотеку питона. Рекомендуется использовать внутреннюю библиотеку питона  tkinter.
 
-import tkinter as tk
-from tkinter import ttk, scrolledtext
 import time
 import itertools
+from tkinter import Tk, Label, Button, Entry, Text, Scrollbar, END, Y, X, BOTH, RIGHT, TOP, BOTTOM, LEFT, filedialog
+from tkinter import messagebox
+from collections import defaultdict
 
-# Функции для логики расписаний (без изменений из предыдущего ответа)
-def check_shift_limits(schedule, num_men, num_women):
+# Функции расчета и генерации расписаний, которые были предоставлены ранее
+def check_shift_limits(schedule, num_men, num_women, num_places, num_shifts):
     workers = ['M' + str(i+1) for i in range(num_men)] + ['W' + str(i+1) for i in range(num_women)]
     for worker in workers:
       shift_count = 0
@@ -21,7 +22,7 @@ def check_shift_limits(schedule, num_men, num_women):
         return False
     return True
 
-def calculate_efficiency(schedule):
+def calculate_efficiency(schedule, num_men, num_women):
     efficiency = 0
     for shift_workers in schedule:
         for worker in shift_workers:
@@ -32,7 +33,9 @@ def calculate_efficiency(schedule):
     return efficiency
 
 def generate_schedules_algorithmic(num_men, num_women, num_places, num_shifts, max_schedules=None):
+    print("\nАлгоритмический способ:")
     start_time = time.time()
+
     men_places = [1, 2]
     workers = ['M' + str(i+1) for i in range(num_men)] + ['W' + str(i+1) for i in range(num_women)]
     schedule_count = 0
@@ -50,8 +53,8 @@ def generate_schedules_algorithmic(num_men, num_women, num_places, num_shifts, m
                     break
             if not valid_schedule:
                 break
-        if valid_schedule and check_shift_limits(shift_combination, num_men, num_women):
-            efficiency = calculate_efficiency(shift_combination)
+        if valid_schedule and check_shift_limits(shift_combination, num_men, num_women, num_places, num_shifts):
+            efficiency = calculate_efficiency(shift_combination, num_men, num_women)
             all_schedules.append(shift_combination)
             if efficiency > best_efficiency:
                 best_schedule = shift_combination
@@ -62,11 +65,16 @@ def generate_schedules_algorithmic(num_men, num_women, num_places, num_shifts, m
 
     end_time = time.time()
     elapsed_time = end_time - start_time
-    
-    return elapsed_time, all_schedules, best_schedule, schedule_count, best_efficiency
+    print(f"\nВсего расписаний (алгоритмический способ): {schedule_count}")
+    print(f"Время выполнения (алгоритмический способ): {elapsed_time:.4f} секунд")
+    print(f"Наилучшая эффективность (алгоритмический способ): {best_efficiency}")
+    return elapsed_time, all_schedules, best_schedule
+
 
 def generate_schedules_pythonic(num_men, num_women, num_places, num_shifts, max_schedules=None):
+    print("\nС помощью функций Питона:")
     start_time = time.time()
+
     men_places = [1, 2]
     workers = ['M' + str(i+1) for i in range(num_men)] + ['W' + str(i+1) for i in range(num_women)]
     
@@ -83,8 +91,8 @@ def generate_schedules_pythonic(num_men, num_women, num_places, num_shifts, max_
                 valid_schedule = False
                 break
         
-        if valid_schedule and check_shift_limits(shift_combination, num_men, num_women):
-            efficiency = calculate_efficiency(shift_combination)
+        if valid_schedule and check_shift_limits(shift_combination, num_men, num_women, num_places, num_shifts):
+            efficiency = calculate_efficiency(shift_combination, num_men, num_women)
             all_schedules.append(shift_combination)
             if efficiency > best_efficiency:
                 best_schedule = shift_combination
@@ -95,115 +103,132 @@ def generate_schedules_pythonic(num_men, num_women, num_places, num_shifts, max_
 
     end_time = time.time()
     elapsed_time = end_time - start_time
-    
-    return elapsed_time, all_schedules, best_schedule, schedule_count, best_efficiency
+    print(f"\nВсего расписаний (с помощью функций Питона): {schedule_count}")
+    print(f"Время выполнения (с помощью функций Питона): {elapsed_time:.4f} секунд")
+    print(f"Наилучшая эффективность (с помощью функций Питона): {best_efficiency}")
+    return elapsed_time, all_schedules, best_schedule
 
-# Функция для запуска генерации расписаний
-def run_schedules(method, text_widget, num_men, num_women, num_places, num_shifts, max_schedules):
-    text_widget.delete(1.0, tk.END)
-    
-    if method == "algorithmic":
-        text_widget.insert(tk.END, "Алгоритмический способ:\n")
-        elapsed_time, all_schedules, best_schedule, schedule_count, best_efficiency = generate_schedules_algorithmic(num_men, num_women, num_places, num_shifts, max_schedules)
-    elif method == "pythonic":
-        text_widget.insert(tk.END, "С помощью функций Питона:\n")
-        elapsed_time, all_schedules, best_schedule, schedule_count, best_efficiency = generate_schedules_pythonic(num_men, num_women, num_places, num_shifts, max_schedules)
-    else:
-        text_widget.insert(tk.END, "Неверный метод.\n")
-        return
-    
-    text_widget.insert(tk.END, "\nВсе расписания:\n")
-    for i, schedule in enumerate(all_schedules):
-        text_widget.insert(tk.END, f"\nРасписание {i+1}:\n")
+
+def display_schedules(text_widget, schedules, method_name):
+    text_widget.insert(END, f"\nВсе расписания ({method_name}):\n")
+    for i, schedule in enumerate(schedules):
+        text_widget.insert(END, f"\nРасписание {i+1}:\n")
         for shift_index, workers_perm in enumerate(schedule):
-            text_widget.insert(tk.END, f"  Смена {shift_index+1}: ")
+            text_widget.insert(END, f"  Смена {shift_index+1}: ")
             for j, worker in enumerate(workers_perm):
-                text_widget.insert(tk.END, f"Место {j+1}: {worker}  ")
-            text_widget.insert(tk.END, "\n")
+                text_widget.insert(END, f"Место {j+1}: {worker}  ")
+            text_widget.insert(END, "\n")
 
-    text_widget.insert(tk.END, f"\nВсего расписаний: {schedule_count}\n")
-    text_widget.insert(tk.END, f"Время выполнения: {elapsed_time:.4f} секунд\n")
-    text_widget.insert(tk.END, f"Наилучшая эффективность: {best_efficiency}\n")
-    
-    if best_schedule:
-        text_widget.insert(tk.END, "\nНаилучшее расписание:\n")
-        for shift_index, workers_perm in enumerate(best_schedule):
-           text_widget.insert(tk.END, f"  Смена {shift_index+1}: ")
-           for j, worker in enumerate(workers_perm):
-                text_widget.insert(tk.END, f"Место {j+1}: {worker}  ")
-           text_widget.insert(tk.END, "\n")
+def display_best_schedule(text_widget, schedule, method_name):
+    if schedule:
+        text_widget.insert(END, f"\nНаилучшее расписание ({method_name}):\n")
+        for shift_index, workers_perm in enumerate(schedule):
+            text_widget.insert(END, f"  Смена {shift_index+1}: ")
+            for j, worker in enumerate(workers_perm):
+                 text_widget.insert(END, f"Место {j+1}: {worker}  ")
+            text_widget.insert(END, "\n")
     else:
-        text_widget.insert(tk.END, "\nНе найдено ни одного корректного расписания.\n")
-    text_widget.see(tk.END) # Scroll to end
+         text_widget.insert(END, f"\nНе найдено ни одного корректного расписания ({method_name})\n")
 
-# GUI setup
-def create_gui():
-    root = tk.Tk()
-    root.title("Генератор расписаний конвейера")
 
-    # Input Frame
-    input_frame = ttk.LabelFrame(root, text="Параметры")
-    input_frame.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
+def run_schedule_generation(text_widget, num_men, num_women, num_places, num_shifts, max_schedules):
+    text_widget.delete(1.0, END)  # Очистка текстового виджета
 
-    ttk.Label(input_frame, text="Мужчин:").grid(row=0, column=0, padx=5, pady=5, sticky="e")
-    num_men_entry = ttk.Entry(input_frame)
-    num_men_entry.insert(0, "8")
-    num_men_entry.grid(row=0, column=1, padx=5, pady=5, sticky="w")
-
-    ttk.Label(input_frame, text="Женщин:").grid(row=1, column=0, padx=5, pady=5, sticky="e")
-    num_women_entry = ttk.Entry(input_frame)
-    num_women_entry.insert(0, "16")
-    num_women_entry.grid(row=1, column=1, padx=5, pady=5, sticky="w")
-
-    ttk.Label(input_frame, text="Мест:").grid(row=2, column=0, padx=5, pady=5, sticky="e")
-    num_places_entry = ttk.Entry(input_frame)
-    num_places_entry.insert(0, "4")
-    num_places_entry.grid(row=2, column=1, padx=5, pady=5, sticky="w")
-
-    ttk.Label(input_frame, text="Смен:").grid(row=3, column=0, padx=5, pady=5, sticky="e")
-    num_shifts_entry = ttk.Entry(input_frame)
-    num_shifts_entry.insert(0, "3")
-    num_shifts_entry.grid(row=3, column=1, padx=5, pady=5, sticky="w")
+    # Запуск алгоритмического способа
+    start_time_alg = time.time()
+    time_algorithmic, all_schedules_alg, best_schedule_alg = generate_schedules_algorithmic(num_men, num_women, num_places, num_shifts, max_schedules)
+    end_time_alg = time.time()
+    time_algorithmic = end_time_alg - start_time_alg
     
-    ttk.Label(input_frame, text="Макс. расписаний:").grid(row=4, column=0, padx=5, pady=5, sticky="e")
-    max_schedules_entry = ttk.Entry(input_frame)
-    max_schedules_entry.insert(0, "1000")
-    max_schedules_entry.grid(row=4, column=1, padx=5, pady=5, sticky="w")
+    display_schedules(text_widget, all_schedules_alg, "алгоритмический способ")
+    display_best_schedule(text_widget, best_schedule_alg, "алгоритмический способ")
 
-    # Output Frame
-    output_frame = ttk.LabelFrame(root, text="Результаты")
-    output_frame.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
-
-    text_output = scrolledtext.ScrolledText(output_frame, wrap=tk.WORD, width=80, height=25)
-    text_output.pack(padx=5, pady=5)
-
-    # Buttons
-    button_frame = ttk.Frame(root)
-    button_frame.grid(row=1, column=0, columnspan=2, pady=10)
+    # Запуск Pythonic способа
+    start_time_py = time.time()
+    time_pythonic, all_schedules_py, best_schedule_py = generate_schedules_pythonic(num_men, num_women, num_places, num_shifts, max_schedules)
+    end_time_py = time.time()
+    time_pythonic = end_time_py - start_time_py
     
-    def run_alg_wrapper():
-      num_men = int(num_men_entry.get())
-      num_women = int(num_women_entry.get())
-      num_places = int(num_places_entry.get())
-      num_shifts = int(num_shifts_entry.get())
-      max_schedules = int(max_schedules_entry.get())
-      run_schedules("algorithmic", text_output, num_men, num_women, num_places, num_shifts, max_schedules)
-    
-    def run_py_wrapper():
-      num_men = int(num_men_entry.get())
-      num_women = int(num_women_entry.get())
-      num_places = int(num_places_entry.get())
-      num_shifts = int(num_shifts_entry.get())
-      max_schedules = int(max_schedules_entry.get())
-      run_schedules("pythonic", text_output, num_men, num_women, num_places, num_shifts, max_schedules)
+    display_schedules(text_widget, all_schedules_py, "с помощью функций Питона")
+    display_best_schedule(text_widget, best_schedule_py, "с помощью функций Питона")
 
-    ttk.Button(button_frame, text="Алгоритмический", command=run_alg_wrapper).grid(row=0, column=0, padx=5)
-    ttk.Button(button_frame, text="С помощью функций Питона", command=run_py_wrapper).grid(row=0, column=1, padx=5)
-    
-    root.grid_columnconfigure(1, weight=1)
-    root.grid_rowconfigure(0, weight=1)
-    
-    root.mainloop()
+    text_widget.insert(END, "\nСравнение времени выполнения:\n")
+    text_widget.insert(END, f"Алгоритмическим способом: {time_algorithmic:.4f} секунд\n")
+    text_widget.insert(END, f"с помощью функций Питона: {time_pythonic:.4f} секунд\n")
+    if time_algorithmic < time_pythonic:
+        text_widget.insert(END, f"Алгоритмический способ быстрее на {time_pythonic - time_algorithmic:.4f} секунд.\n")
+    elif time_pythonic < time_algorithmic:
+        text_widget.insert(END, f"Способ с помощью функций Питона быстрее на {time_algorithmic - time_pythonic:.4f} секунд.\n")
+    else:
+        text_widget.insert(END, f"Времена выполнения способов равны.\n")
 
-if __name__ == "__main__":
-    create_gui()
+
+def start_generation():
+    try:
+        num_men = int(entry_men.get())
+        num_women = int(entry_women.get())
+        num_places = int(entry_places.get())
+        num_shifts = int(entry_shifts.get())
+        max_schedules = int(entry_max_schedules.get())
+
+        if num_men <= 0 or num_women <= 0 or num_places <= 0 or num_shifts <= 0 or max_schedules <= 0 :
+            messagebox.showerror("Ошибка", "Все значения должны быть положительными целыми числами.")
+            return
+        if num_places < 2:
+             messagebox.showerror("Ошибка", "Количество мест должно быть больше 1, так как как минимум 2 места для мужчин")
+             return
+
+        run_schedule_generation(text_output, num_men, num_women, num_places, num_shifts, max_schedules)
+    except ValueError:
+        messagebox.showerror("Ошибка", "Пожалуйста, введите целые числа для всех полей.")
+
+# Инициализация главного окна
+root = Tk()
+root.title("Генератор расписаний")
+
+# Размещение элементов интерфейса
+Label(root, text="Количество мужчин:").grid(row=0, column=0, sticky="e")
+entry_men = Entry(root)
+entry_men.grid(row=0, column=1, sticky="w")
+entry_men.insert(0, "8")  # Значение по умолчанию
+
+Label(root, text="Количество женщин:").grid(row=1, column=0, sticky="e")
+entry_women = Entry(root)
+entry_women.grid(row=1, column=1, sticky="w")
+entry_women.insert(0, "16") # Значение по умолчанию
+
+Label(root, text="Количество мест:").grid(row=2, column=0, sticky="e")
+entry_places = Entry(root)
+entry_places.grid(row=2, column=1, sticky="w")
+entry_places.insert(0, "4") # Значение по умолчанию
+
+Label(root, text="Количество смен:").grid(row=3, column=0, sticky="e")
+entry_shifts = Entry(root)
+entry_shifts.grid(row=3, column=1, sticky="w")
+entry_shifts.insert(0, "3") # Значение по умолчанию
+
+Label(root, text="Макс. расписаний:").grid(row=4, column=0, sticky="e")
+entry_max_schedules = Entry(root)
+entry_max_schedules.grid(row=4, column=1, sticky="w")
+entry_max_schedules.insert(0, "1000")  # Значение по умолчанию
+
+
+Button(root, text="Сгенерировать", command=start_generation).grid(row=5, column=0, columnspan=2, pady=10)
+
+# Текстовый виджет для вывода результатов
+text_output = Text(root, wrap="word", height=20)
+text_output.grid(row=6, column=0, columnspan=2, sticky="nsew", padx=10, pady=10)
+
+# Полоса прокрутки
+scrollbar = Scrollbar(root, command=text_output.yview)
+scrollbar.grid(row=6, column=2, sticky="ns")
+text_output.config(yscrollcommand=scrollbar.set)
+
+
+# Настройка сетки для изменения размера
+root.grid_rowconfigure(6, weight=1)
+root.grid_columnconfigure(0, weight=1)
+root.grid_columnconfigure(1, weight=1)
+
+# Запуск GUI
+root.mainloop()
